@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Voting Pemilihan OSIS Resmi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'fade-in': 'fadeIn 0.35s ease-out forwards',
+                        'pop': 'pop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'slide-up': 'slideUp 0.4s ease-out forwards'
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        pop: { '0%': { transform: 'scale(0.92)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1' } },
+                        slideUp: { '0%': { transform: 'translateY(15px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between font-sans antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header Navigation -->
+    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center font-black text-white shadow-lg shadow-indigo-500/20">
+                    O
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold text-white">E-Voting OSIS Resmi</h1>
+                    <p class="text-[10px] text-slate-400">Target Kuota: 500 Pemilih</p>
+                </div>
+            </div>
+            <button onclick="openAdminAuthModal()" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 transition border border-slate-700 text-slate-300">
+                🔒 Admin Rekap
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 py-8 flex-grow w-full">
+
+        <!-- STATUS HP TERKUNCI (HANYA BISA 1X VOTE) -->
+        <section id="section-locked" class="hidden animate-pop max-w-sm mx-auto text-center">
+            <div class="bg-slate-900 border border-red-500/30 rounded-3xl p-6 shadow-2xl">
+                <div class="w-14 h-14 bg-red-500/10 text-red-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">🚫</div>
+                <h2 class="text-xl font-bold text-white mb-1">Akses Terkunci</h2>
+                <p class="text-xs text-slate-400 mb-4">Perangkat/HP ini sudah pernah digunakan untuk memberikan suara.</p>
+                <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-400">
+                    Satu HP hanya memiliki 1 kali hak pilih demi menjaga keabsahan data.
+                </div>
+            </div>
+        </section>
+
+        <!-- BERANDA / LOGIN SISWA -->
+        <section id="section-login" class="animate-slide-up max-w-sm mx-auto">
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="text-center mb-6">
+                    <span class="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20 uppercase tracking-wider">Presensi Pemilih</span>
+                    <h2 class="text-2xl font-extrabold mt-3 text-white">Selamat Datang</h2>
+                    <p class="text-xs text-slate-400 mt-1">Masukkan nama & kelas Anda sebelum memilih.</p>
+                </div>
+
+                <form onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Nama Lengkap</label>
+                        <input type="text" id="input-nama" required placeholder="Contoh: ABDUL ILHAM" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-xs text-white placeholder-slate-600">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Kelas</label>
+                        <input type="text" id="input-kelas" required placeholder="Contoh: XII TKJ 2" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-xs text-white placeholder-slate-600">
+                    </div>
+                    <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/30 active:scale-95">
+                        Masuk ke Surat Suara →
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- HALAMAN VOTING PASLON -->
+        <section id="section-voting" class="hidden animate-fade-in">
+            <div class="text-center mb-8">
+                <span id="user-display" class="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3.5 py-1.5 rounded-full border border-indigo-500/20"></span>
+                <h2 class="text-3xl font-black mt-3 text-white">Surat Suara Digital</h2>
+                <p class="text-xs text-slate-400 mt-1">Pilih salah satu pasangan calon di bawah ini.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- PASLON 01 -->
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl hover:border-indigo-500/50 transition flex flex-col justify-between">
+                    <div class="relative bg-slate-950 aspect-[3/4] p-2 flex items-center justify-center">
+                        <img src="paslon1.jpg" alt="Paslon 01" class="w-full h-full object-contain" onerror="this.src='https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600'">
+                        <span class="absolute top-3 left-3 bg-indigo-600 text-white font-black text-xl px-3 py-1 rounded-xl shadow-lg">01</span>
+                    </div>
+                    <div class="p-5 text-center">
+                        <h3 class="font-black text-xl text-white mb-4">PASLON 01</h3>
+                        <button onclick="openModal(1)" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/30 active:scale-95">
+                            Pilih Paslon 01
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PASLON 02 -->
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl hover:border-purple-500/50 transition flex flex-col justify-between">
+                    <div class="relative bg-slate-950 aspect-[3/4] p-2 flex items-center justify-center">
+                        <img src="paslon2.jpg" alt="Paslon 02" class="w-full h-full object-contain" onerror="this.src='https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600'">
+                        <span class="absolute top-3 left-3 bg-purple-600 text-white font-black text-xl px-3 py-1 rounded-xl shadow-lg">02</span>
+                    </div>
+                    <div class="p-5 text-center">
+                        <h3 class="font-black text-xl text-white mb-4">PASLON 02</h3>
+                        <button onclick="openModal(2)" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-purple-600/30 active:scale-95">
+                            Pilih Paslon 02
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PASLON 03 -->
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl hover:border-emerald-500/50 transition flex flex-col justify-between">
+                    <div class="relative bg-slate-950 aspect-[3/4] p-2 flex items-center justify-center">
+                        <img src="paslon3.jpg" alt="Paslon 03" class="w-full h-full object-contain" onerror="this.src='https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=600'">
+                        <span class="absolute top-3 left-3 bg-emerald-600 text-white font-black text-xl px-3 py-1 rounded-xl shadow-lg">03</span>
+                    </div>
+                    <div class="p-5 text-center">
+                        <h3 class="font-black text-xl text-white mb-4">PASLON 03</h3>
+                        <button onclick="openModal(3)" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-emerald-600/30 active:scale-95">
+                            Pilih Paslon 03
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- HALAMAN TERIMA KASIH -->
+        <section id="section-thanks" class="hidden animate-pop max-w-sm mx-auto text-center">
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+                <div class="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl animate-bounce">✓</div>
+                <h2 class="text-2xl font-bold text-white mb-2">Suara Berhasil Terkirim!</h2>
+                <p class="text-xs text-slate-400">Terima kasih <span id="thanks-name" class="font-bold text-white"></span>. Pilihan Anda telah aman tersimpan di Google Sheets.</p>
+            </div>
+        </section>
+
+        <!-- DASHBOARD REKAP ADMIN -->
+        <section id="section-rekap" class="hidden animate-fade-in space-y-6">
+            <div class="flex justify-between items-center bg-slate-900 border border-slate-800 p-5 rounded-3xl">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Panel Rekapitulasi Terpusat</h2>
+                    <p class="text-xs text-slate-400">Data realtime dari Google Sheets</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="fetchCentralData()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-indigo-600/20 flex items-center gap-1.5">
+                        🔄 Refresh Data
+                    </button>
+                    <button onclick="logoutAdmin()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition border border-slate-700">
+                        Keluar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Total Progress Bar -->
+            <div class="bg-slate-900 border border-slate-800 p-5 rounded-3xl space-y-2">
+                <div class="flex justify-between text-xs font-bold">
+                    <span class="text-slate-400">TOTAL SUARA MASUK</span>
+                    <span id="rekap-total-text" class="text-indigo-400">0 / 500 Suara (0%)</span>
+                </div>
+                <div class="w-full bg-slate-950 rounded-full h-3.5 overflow-hidden p-0.5 border border-slate-800">
+                    <div id="progress-bar-total" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full transition-all duration-700 w-0"></div>
+                </div>
+            </div>
+
+            <!-- Perolehan Suara Paslon -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-3xl text-center">
+                    <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider">PASLON 01</span>
+                    <h3 id="count-p1" class="text-4xl font-black text-white my-1">0</h3>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-3xl text-center">
+                    <span class="text-xs font-bold text-purple-400 uppercase tracking-wider">PASLON 02</span>
+                    <h3 id="count-p2" class="text-4xl font-black text-white my-1">0</h3>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-3xl text-center">
+                    <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">PASLON 03</span>
+                    <h3 id="count-p3" class="text-4xl font-black text-white my-1">0</h3>
+                </div>
+            </div>
+
+            <!-- Tabel Daftar Pemilih -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+                <div class="p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
+                    <span class="text-xs font-bold text-white">Daftar Siswa Sudah Memilih</span>
+                    <span id="voter-badge" class="text-xs bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full border border-indigo-500/20 font-bold">0 Orang</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-950 text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                            <tr>
+                                <th class="p-3.5">No</th>
+                                <th class="p-3.5">Nama Lengkap</th>
+                                <th class="p-3.5">Kelas</th>
+                                <th class="p-3.5">Pilihan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="divide-y divide-slate-800/60">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL KONFIRMASI VOTING -->
+    <div id="modal-confirm" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl animate-pop">
+            <div class="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl font-bold">?</div>
+            <h3 class="text-lg font-bold text-white mb-1">Konfirmasi Pilihan</h3>
+            <p class="text-xs text-slate-300 mb-6">Apakah Anda yakin memilih <span id="modal-paslon-text" class="font-bold text-indigo-400"></span>? Pilihan tidak dapat diubah kembali.</p>
+            <div class="flex gap-3">
+                <button onclick="closeModal()" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition">Batal</button>
+                <button onclick="confirmVote()" id="btn-submit" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/30">Ya, Yakin!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LOGIN ADMIN -->
+    <div id="modal-admin" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl animate-pop">
+            <div class="w-12 h-12 bg-purple-500/10 text-purple-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">🔒</div>
+            <h3 class="text-lg font-bold text-white mb-1">Akses Admin</h3>
+            <p class="text-xs text-slate-400 mb-4">Masukkan password untuk membuka rekapitulasi.</p>
+            <form onsubmit="handleAdminLogin(event)" class="space-y-3">
+                <input type="password" id="input-admin-pass" placeholder="Password Admin" required class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white text-center outline-none focus:ring-2 focus:ring-indigo-500">
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeAdminModal()" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition">Batal</button>
+                    <button type="submit" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/30">Masuk Rekap</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT LOGIKA APLIKASI -->
+    <script>
+        // MASUKKAN URL GOOGLE APPS SCRIPT BERAKHIRAN /exec DI BAWAH INI
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7d7UBhr7d-HD1WUeArAcAwyoyiUh1dQWJlLzq2l8fy6We7UQxiJxidbdblaZLIy9J/exec";
+        
+        const TOTAL_TARGET = 500;
+        const ADMIN_PASS = "KONFIRMASI";
+        let currentUser = null;
+        let selectedPaslon = null;
+        let isAdmin = false;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('osis_voted_device') === 'true' && !isAdmin) {
+                showSection('locked');
+            }
+        });
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const nama = document.getElementById('input-nama').value.trim();
+            const kelas = document.getElementById('input-kelas').value.trim();
+            
+            if (!nama || !kelas) return;
+
+            currentUser = { nama, kelas };
+            document.getElementById('user-display').innerText = `Pemilih: ${nama} (${kelas})`;
+            showSection('voting');
+        }
+
+        function openModal(id) {
+            selectedPaslon = id;
+            document.getElementById('modal-paslon-text').innerText = `PASLON 0${id}`;
+            document.getElementById('modal-confirm').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal-confirm').classList.add('hidden');
+        }
+
+        function confirmVote() {
+            if (!selectedPaslon || !currentUser) return;
+
+            const btn = document.getElementById('btn-submit');
+            btn.disabled = true;
+            btn.innerText = "Mengirim...";
+
+            const payload = {
+                nama: currentUser.nama,
+                kelas: currentUser.kelas,
+                paslon: `PASLON 0${selectedPaslon}`
+            };
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                localStorage.setItem('osis_voted_device', 'true');
+                closeModal();
+                document.getElementById('thanks-name').innerText = currentUser.nama;
+                showSection('thanks');
+            }).catch(err => {
+                alert("Gagal terhubung ke jaringan. Coba lagi.");
+            }).finally(() => {
+                btn.disabled = false;
+                btn.innerText = "Ya, Yakin!";
+            });
+        }
+
+        function openAdminAuthModal() {
+            if (isAdmin) {
+                showSection('rekap');
+                fetchCentralData();
+            } else {
+                document.getElementById('modal-admin').classList.remove('hidden');
+            }
+        }
+
+        function closeAdminModal() {
+            document.getElementById('modal-admin').classList.add('hidden');
+        }
+
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            if (document.getElementById('input-admin-pass').value === ADMIN_PASS) {
+                isAdmin = true;
+                closeAdminModal();
+                showSection('rekap');
+                fetchCentralData();
+            } else {
+                alert("Password Admin Salah!");
+            }
+        }
+
+        function logoutAdmin() {
+            isAdmin = false;
+            showSection(localStorage.getItem('osis_voted_device') === 'true' ? 'locked' : 'login');
+        }
+
+        function showSection(id) {
+            ['locked', 'login', 'voting', 'thanks', 'rekap'].forEach(s => {
+                document.getElementById(`section-${s}`).classList.add('hidden');
+            });
+            document.getElementById(`section-${id}`).classList.remove('hidden');
+        }
+
+        function fetchCentralData() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500">Memuat data dari Google Sheets...</td></tr>`;
+
+            fetch(GOOGLE_SCRIPT_URL)
+                .then(res => {
+                    if (!res.ok) throw new Error("Gagal mengambil data");
+                    return res.json();
+                })
+                .then(rows => {
+                    const total = rows.length;
+                    const p1 = rows.filter(r => r.paslon === 'PASLON 01').length;
+                    const p2 = rows.filter(r => r.paslon === 'PASLON 02').length;
+                    const p3 = rows.filter(r => r.paslon === 'PASLON 03').length;
+
+                    document.getElementById('count-p1').innerText = p1;
+                    document.getElementById('count-p2').innerText = p2;
+                    document.getElementById('count-p3').innerText = p3;
+                    document.getElementById('voter-badge').innerText = `${total} Orang`;
+
+                    const percent = ((total / TOTAL_TARGET) * 100).toFixed(1);
+                    document.getElementById('rekap-total-text').innerText = `${total} / ${TOTAL_TARGET} Suara (${percent}%)`;
+                    document.getElementById('progress-bar-total').style.width = `${Math.min(percent, 100)}%`;
+
+                    tbody.innerHTML = '';
+                    if (rows.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500">Belum ada suara masuk.</td></tr>`;
+                        return;
+                    }
+
+                    rows.slice().reverse().forEach((row, idx) => {
+                        tbody.innerHTML += `
+                            <tr class="hover:bg-slate-800/40 border-b border-slate-800/40">
+                                <td class="p-3.5 text-slate-500 font-mono">${rows.length - idx}</td>
+                                <td class="p-3.5 font-bold text-white">${row.nama || '-'}</td>
+                                <td class="p-3.5 text-slate-300">${row.kelas || '-'}</td>
+                                <td class="p-3.5 text-indigo-400 font-bold">${row.paslon || '-'}</td>
+                            </tr>
+                        `;
+                    });
+                })
+                .catch(err => {
+                    console.error(err);
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-400">Gagal mengambil data dari Google Sheets. Pastikan hak akses Apps Script sudah diatur ke 'Siapa Saja' (Anyone).</td></tr>`;
+                });
+        }
+    </script>
+</body>
+</html>
